@@ -13,13 +13,19 @@ chai.use(chaiDateTime)
 
 const { expect } = chai
 
+const retryAfter = 60
+
 describe('knexConnector', () => {
   let connection
   let connector
 
   before(() => {
     connection = knex(knexConfig.development)
-    connector = knexConnector({ knex: connection })
+    connector = knexConnector({ knex: connection, retryAfter })
+  })
+
+  afterEach(() => {
+    return connection.table('jobs').delete()
   })
 
   it('pushes job to database', async () => {
@@ -42,5 +48,18 @@ describe('knexConnector', () => {
     expect(new Date(dbRecord.created_at)).to.equalDate(new Date())
 
     clock.restore()
+  })
+
+  it('pops first available job', async () => {
+    await connector.push(job.of('test.job'))
+    const newJob = await connector.pop('default')
+
+    expect(newJob).to.exist // eslint-disable-line
+    expect(newJob.toJSON()).to.deep.include({
+      name: 'test.job',
+      payload: {},
+      attempts: 1,
+      queue: 'default'
+    })
   })
 })

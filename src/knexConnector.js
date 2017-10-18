@@ -1,3 +1,5 @@
+const { job } = require('@desmart/queue')
+
 module.exports = ({
   knex,
   table = 'jobs',
@@ -11,7 +13,7 @@ module.exports = ({
       queue: job.queue,
       payload: JSON.stringify(job),
       attempts: job.attempts,
-      created_at: Date.now()
+      created_at: new Date()
     }
 
     return knex.table(table)
@@ -21,5 +23,33 @@ module.exports = ({
   },
 
   listen (queue) {
+  },
+
+  async pop (queue) {
+    return knex
+      .transaction(async trx => {
+        const record = await knex.table(table)
+          .transacting(trx)
+          .forUpdate()
+          .orderBy('id', 'asc')
+          .first()
+
+        if (!record) {
+          throw new Error()
+        }
+
+        await knex.table(table)
+          .transacting(trx)
+          .where({ id: record.id })
+          .update({
+            reserved_at: new Date(),
+            attempts: record.attempts + 1
+          })
+
+        return JSON.parse(record.payload)
+      })
+      // @TODO convert to Job
+      .then(payload => job.fromJSON(payload).increment())
+      .catch(_ => null)
   }
 })
