@@ -31,7 +31,8 @@
     "globals": [
       "describe",
       "it",
-      "before"
+      "before",
+      "afterEach"
     ]
   }
 }
