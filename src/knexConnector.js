@@ -3,9 +3,24 @@ const { job } = require('@desmart/queue')
 const toJob = (knex, table) => record => job.fromJSON(JSON.parse(record.payload))
   .increment()
   .withActions({
-    remove: () => knex.transaction(
-      trx => trx.from(table).where({ id: record.id }).delete()
-    )
+    remove () {
+      return knex.transaction(
+        trx => trx.from(table)
+          .where({ id: record.id })
+          .delete()
+      )
+    },
+
+    release (delay = 0) {
+      return knex.transaction(
+        trx => trx.from(table)
+          .where({ id: record.id })
+          .update({
+            reserved_at: null,
+            available_at: new Date(Date.now() + delay * 1000)
+          })
+      )
+    }
   })
 
 module.exports = ({
@@ -21,7 +36,8 @@ module.exports = ({
       queue: job.queue,
       payload: JSON.stringify(job),
       attempts: job.attempts,
-      created_at: new Date()
+      created_at: new Date(),
+      available_at: new Date()
     }
 
     return knex.table(table)

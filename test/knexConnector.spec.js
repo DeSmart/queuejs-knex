@@ -76,5 +76,23 @@ describe('knexConnector', () => {
 
       expect(count).to.equal(0)
     })
+
+    it('allows to release job', async () => {
+      const clock = sinon.useFakeTimers({ now: Date.now() })
+
+      const jobId = await connector.push(job.of('test.job'))
+      const newJob = await connector.pop('default')
+
+      await newJob.release(60)
+
+      const dbRecord = await connection.table('jobs')
+        .where({ id: jobId })
+        .first()
+
+      expect(dbRecord.reserved_at).to.equal(null)
+      expect(dateToSeconds(dbRecord.available_at)).to.equal(dateToSeconds(Date.now() + 60000))
+
+      clock.restore()
+    })
   })
 })

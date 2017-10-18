@@ -6,6 +6,7 @@ exports.up = function (knex, Promise) {
     table.text('payload', 'longtext')
     table.integer('attempts').unsigned()
     table.integer('reserved_at').unsigned().nullable()
+    table.integer('available_at').unsigned()
     table.integer('created_at').unsigned()
     table.index(['queue', 'reserved_at'])
   })
