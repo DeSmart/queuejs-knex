@@ -23,6 +23,15 @@ const toJob = (knex, table) => record => job.fromJSON(JSON.parse(record.payload)
     }
   })
 
+const isAvailable = function () {
+  this.whereNull('reserved_at')
+    .where('available_at', '<=', new Date())
+}
+
+const isReservedButExpired = retryAfter => function () {
+  this.where('reserved_at', '<=', new Date(Date.now() - retryAfter * 1000))
+}
+
 module.exports = ({
   knex,
   table = 'jobs',
@@ -55,6 +64,8 @@ module.exports = ({
         const record = await knex.table(table)
           .transacting(trx)
           .forUpdate()
+          .where(isAvailable)
+          .orWhere(isReservedButExpired(retryAfter))
           .orderBy('id', 'asc')
           .first()
 

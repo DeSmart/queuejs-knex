@@ -95,4 +95,34 @@ describe('knexConnector', () => {
       clock.restore()
     })
   })
+
+  describe('reserved_at', () => {
+    let clock
+
+    beforeEach(() => {
+      clock = sinon.useFakeTimers({ now: Date.now() })
+    })
+
+    afterEach(() => {
+      clock.restore()
+    })
+
+    it('cant take job which is reserved', async () => {
+      await connector.push(job.of('test.job'))
+      await connector.pop('default')
+
+      const newJob = await connector.pop('default')
+      expect(newJob).to.equal(null)
+    })
+
+    it('can take job which reservation expired', async () => {
+      await connector.push(job.of('test.job'))
+      await connector.pop('default')
+
+      clock.tick(retryAfter * 1000)
+
+      const newJob = await connector.pop('default')
+      expect(newJob).to.exist // eslint-disable-line
+    })
+  })
 })
