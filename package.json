@@ -1,0 +1,27 @@
+{
+  "name": "@desmart/queue-knex",
+  "version": "0.0.1",
+  "description": "Knexjs connector for @desmart/queue",
+  "main": "index.js",
+  "author": "Radoslaw Mejer <radmen@radmen.info>",
+  "license": "MIT",
+  "scripts": {
+    "test": "mocha test/*.spec.js",
+    "lint": "standard",
+    "lint:fix": "standard --fix",
+    "prepush": "npm run lint"
+  },
+  "dependencies": {
+    "knex": "^0.13.0"
+  },
+  "devDependencies": {
+    "@desmart/queue": "https://github.com/DeSmart/queuejs.git",
+    "chai": "^4.1.2",
+    "husky": "^0.14.3",
+    "mocha": "^4.0.1",
+    "sinon": "^4.0.1",
+    "sinon-chai": "^2.14.0",
+    "sqlite3": "^3.1.13",
+    "standard": "^10.0.3"
+  }
+}
