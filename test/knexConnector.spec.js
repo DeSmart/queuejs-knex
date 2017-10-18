@@ -1,7 +1,6 @@
 const chai = require('chai')
 const sinon = require('sinon')
 const sinonChai = require('sinon-chai')
-const chaiDateTime = require('chai-datetime')
 const knex = require('knex')
 const { job } = require('@desmart/queue')
 
@@ -9,11 +8,12 @@ const knexConnector = require('../')
 const knexConfig = require('../knexfile')
 
 chai.use(sinonChai)
-chai.use(chaiDateTime)
 
 const { expect } = chai
 
 const retryAfter = 60
+
+const dateToSeconds = date => Math.round(new Date(date).getTime() / 1000, 0)
 
 describe('knexConnector', () => {
   let connection
@@ -45,7 +45,7 @@ describe('knexConnector', () => {
       reserved_at: null
     })
 
-    expect(new Date(dbRecord.created_at)).to.equalDate(new Date())
+    expect(dateToSeconds(dbRecord.created_at)).to.equal(dateToSeconds(new Date()))
 
     clock.restore()
   })
