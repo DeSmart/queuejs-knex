@@ -62,4 +62,19 @@ describe('knexConnector', () => {
       queue: 'default'
     })
   })
+
+  describe('job actions', () => {
+    it('allows to remove job', async () => {
+      const jobId = await connector.push(job.of('test.job'))
+      const newJob = await connector.pop('default')
+
+      await newJob.remove()
+
+      const [{ count }] = await connection.table('jobs')
+        .where({ id: jobId })
+        .count('id as count')
+
+      expect(count).to.equal(0)
+    })
+  })
 })

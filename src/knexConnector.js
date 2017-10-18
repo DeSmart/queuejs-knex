@@ -1,5 +1,13 @@
 const { job } = require('@desmart/queue')
 
+const toJob = (knex, table) => record => job.fromJSON(JSON.parse(record.payload))
+  .increment()
+  .withActions({
+    remove: () => knex.transaction(
+      trx => trx.from(table).where({ id: record.id }).delete()
+    )
+  })
+
 module.exports = ({
   knex,
   table = 'jobs',
@@ -46,10 +54,9 @@ module.exports = ({
             attempts: record.attempts + 1
           })
 
-        return JSON.parse(record.payload)
+        return record
       })
-      // @TODO convert to Job
-      .then(payload => job.fromJSON(payload).increment())
+      .then(toJob(knex, table))
       .catch(_ => null)
   }
 })
