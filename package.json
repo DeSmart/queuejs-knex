@@ -6,6 +6,8 @@
   "author": "Radoslaw Mejer <radmen@radmen.info>",
   "license": "MIT",
   "scripts": {
+    "pretest": "knex migrate:latest",
+    "posttest": "knex migrate:rollback",
     "test": "mocha test/*.spec.js",
     "lint": "standard",
     "lint:fix": "standard --fix",
