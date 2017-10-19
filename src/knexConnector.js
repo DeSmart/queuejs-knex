@@ -5,7 +5,12 @@ const timestamp = date => date
   ? dateToTimestamp(date)
   : dateToTimestamp(new Date())
 
-const toJob = (knex, table) => record => job.fromJSON(JSON.parse(record.payload))
+const getJobAttributes = dbRecord => Object.assign(
+  JSON.parse(dbRecord.payload),
+  { attempts: dbRecord.attempts }
+)
+
+const toJob = (knex, table) => record => job.fromJSON(getJobAttributes(record))
   .increment()
   .withActions({
     remove () {
@@ -40,9 +45,12 @@ const isReservedButExpired = retryAfter => function () {
 module.exports = ({
   knex,
   table = 'jobs',
-  retryAfter = 600
+  retryAfter = 600,
+  dispatchJob = () => { }
 }) => ({
-  onJob (job) {
+
+  onJob (handler) {
+    dispatchJob = handler
   },
 
   push (job) {
@@ -60,7 +68,25 @@ module.exports = ({
       .then(([id]) => id)
   },
 
-  listen (queue) {
+  /**
+   * Listen for incoming jobs
+   *
+   * @param  {String}   queue        name of queue
+   * @param  {Object}   options
+   * @param  {Integer}  options.wait wait given number of seconds between checking for new jobs
+   * @return {Function} calling this function will break loop cycle
+   */
+  listen (queue, { wait = 10 } = {}) {
+    const fetch = async () => {
+      const job = await this.pop(queue)
+      job && dispatchJob(job)
+    }
+
+    const timer = setInterval(fetch, wait * 1000)
+
+    return () => {
+      clearInterval(timer)
+    }
   },
 
   async pop (queue) {

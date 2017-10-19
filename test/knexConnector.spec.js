@@ -100,6 +100,15 @@ describe('knexConnector', () => {
       expect(dbRecord.reserved_at).to.equal(null)
       expect(dbRecord.available_at).to.equal(dateToSeconds(Date.now()) + 60)
     })
+
+    it('increments released job attempts', async () => {
+      await connector.push(job.of('test.job'))
+
+      await connector.pop('default').then(job => job.release())
+      const newJob = await connector.pop('default')
+
+      expect(newJob.attempts).to.equal(2)
+    })
   })
 
   describe('reserved_at', () => {
@@ -141,5 +150,72 @@ describe('knexConnector', () => {
 
       expect(nextJob).to.equal(null)
     })
+  })
+
+  describe('listen', () => {
+    const noop = () => {}
+    const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
+
+    afterEach(() => {
+      connector.onJob(noop)
+    })
+
+    it('fetch first available job', async () => {
+      const newJob = job.of('test.job', { foo: 1 })
+      await connector.push(newJob)
+
+      const spy = sinon.spy()
+      connector.onJob(spy)
+
+      const stop = connector.listen('default', { wait: 0.1 })
+      await wait(150)
+
+      stop()
+
+      expect(spy).to.have.been.calledOnce // eslint-disable-line
+      expect(spy.getCall(0).args[0].toJSON()).to.deep.include(newJob.increment().toJSON())
+    })
+
+    it('fetches next jobs', async () => {
+      await connector.push(job.of('test.job'))
+      await connector.push(job.of('test.job'))
+
+      const stub = sinon.stub()
+      stub.callsFake(job => {
+        job.remove()
+      })
+
+      connector.onJob(stub)
+
+      const stop = connector.listen('default', { wait: 0.2 })
+      await wait(500)
+
+      stop()
+
+      expect(stub).to.have.been.calledTwice // eslint-disable-line
+    })
+
+    it('fetches back released job', async () => {
+      await connector.push(job.of('test.job'))
+
+      const stub = sinon.stub()
+      stub.callsFake(job => {
+        if (job.attempts === 1) {
+          job.release(0.5)
+        } else {
+          job.remove()
+        }
+      })
+
+      connector.onJob(stub)
+
+      const stop = connector.listen('default', { wait: 0.5 })
+      await wait(2000)
+
+      stop()
+
+      expect(stub).to.have.been.calledTwice // eslint-disable-line
+    })
+    .timeout(3000)
   })
 })
