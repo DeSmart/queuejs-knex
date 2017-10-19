@@ -2,7 +2,7 @@
 
 case "$NODE_ENV" in
   "mysql")
-    docker run -d --rm --name queue-knex-db -p 3306:3306 \
+    docker run -d --rm --name queue-knex-db -p 7000:3306 \
       -e MYSQL_DATABASE=test \
       -e MYSQL_USER=test \
       -e MYSQL_PASSWORD=test \
@@ -11,7 +11,7 @@ case "$NODE_ENV" in
     ;;
 
   "mysql5")
-    docker run -d --rm --name queue-knex-db -p 3306:3306 \
+    docker run -d --rm --name queue-knex-db -p 7000:3306 \
       -e MYSQL_DATABASE=test \
       -e MYSQL_USER=test \
       -e MYSQL_PASSWORD=test \
@@ -20,7 +20,7 @@ case "$NODE_ENV" in
     ;;
 
   "postgres")
-    docker run -d --rm --name queue-knex-db -p 5432:5432 \
+    docker run -d --rm --name queue-knex-db -p 7000:5432 \
       -e POSTGRES_USER=test \
       -e POSTGRES_USER=test \
       -e POSTGRES_PASSWORD=test \
@@ -28,7 +28,7 @@ case "$NODE_ENV" in
     ;;
 
   "postgres9")
-    docker run -d --rm --name queue-knex-db -p 5432:5432 \
+    docker run -d --rm --name queue-knex-db -p 7000:5432 \
       -e POSTGRES_USER=test \
       -e POSTGRES_USER=test \
       -e POSTGRES_PASSWORD=test \

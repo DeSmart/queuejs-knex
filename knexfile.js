@@ -1,7 +1,8 @@
 const dbConnection = {
   user: 'test',
   database: 'test',
-  password: 'test'
+  password: 'test',
+  port: 7000
 }
 
 module.exports = {
