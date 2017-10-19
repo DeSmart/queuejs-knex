@@ -1,3 +1,4 @@
+const Maybe = require('folktale/maybe')
 const { job } = require('@desmart/queue')
 
 const dateToTimestamp = date => Math.floor(date.getTime() / 1000, 0)
@@ -10,28 +11,31 @@ const getJobAttributes = dbRecord => Object.assign(
   { attempts: dbRecord.attempts }
 )
 
-const toJob = (knex, table) => record => job.fromJSON(getJobAttributes(record))
-  .increment()
-  .withActions({
+const toJob = (knex, table) => dbRecord => dbRecord.map(getJobAttributes)
+  .map(job.fromJSON)
+  .map(job => job.increment())
+  .map(job => job.withActions({
     remove () {
+      const { id } = dbRecord.getOrElse({ id: null })
       return knex.transaction(
         trx => trx.from(table)
-          .where({ id: record.id })
+          .where({ id })
           .delete()
       )
     },
 
     release (delay = 0) {
+      const { id } = dbRecord.getOrElse({ id: null })
       return knex.transaction(
         trx => trx.from(table)
-          .where({ id: record.id })
+          .where({ id })
           .update({
             reserved_at: null,
             available_at: timestamp() + delay
           })
       )
     }
-  })
+  }))
 
 const isAvailable = function () {
   this.whereNull('reserved_at')
@@ -79,7 +83,11 @@ module.exports = ({
   listen (queue, { wait = 10 } = {}) {
     const fetch = async () => {
       const job = await this.pop(queue)
-      job && dispatchJob(job)
+
+      job.matchWith({
+        Just: ({ value }) => dispatchJob(value),
+        Nothing: () => {}
+      })
     }
 
     const timer = setInterval(fetch, wait * 1000)
@@ -101,7 +109,7 @@ module.exports = ({
           .first()
 
         if (!record) {
-          throw new Error()
+          return Maybe.Nothing()
         }
 
         await knex.table(table)
@@ -112,9 +120,8 @@ module.exports = ({
             attempts: record.attempts + 1
           })
 
-        return record
+        return Maybe.Just(record)
       })
       .then(toJob(knex, table))
-      .catch(_ => null)
   }
 })

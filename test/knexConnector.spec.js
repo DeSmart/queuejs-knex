@@ -62,12 +62,16 @@ describe('knexConnector', () => {
     await connector.push(job.of('test.job'))
     const newJob = await connector.pop('default')
 
-    expect(newJob).to.exist // eslint-disable-line
-    expect(newJob.toJSON()).to.deep.include({
-      name: 'test.job',
-      payload: {},
-      attempts: 1,
-      queue: 'default'
+    newJob.matchWith({
+      Just: ({ value }) => expect(value.toJSON()).to.deep.include({
+        name: 'test.job',
+        payload: {},
+        attempts: 1,
+        queue: 'default'
+      }),
+      Nothing: () => {
+        throw new Error('Expected job to exist')
+      }
     })
   })
 
@@ -76,7 +80,9 @@ describe('knexConnector', () => {
       const jobId = await connector.push(job.of('test.job'))
       const newJob = await connector.pop('default')
 
-      await newJob.remove()
+      await newJob.matchWith({
+        Just: ({ value }) => value.remove()
+      })
 
       const [{ count }] = await connection.table('jobs')
         .where({ id: jobId })
@@ -91,7 +97,9 @@ describe('knexConnector', () => {
       const jobId = await connector.push(job.of('test.job'))
       const newJob = await connector.pop('default')
 
-      await newJob.release(60)
+      newJob.matchWith({
+        Just: ({ value }) => value.release(60)
+      })
 
       const dbRecord = await connection.table('jobs')
         .where({ id: jobId })
@@ -104,10 +112,16 @@ describe('knexConnector', () => {
     it('increments released job attempts', async () => {
       await connector.push(job.of('test.job'))
 
-      await connector.pop('default').then(job => job.release())
+      await connector.pop('default')
+        .then(job => job.matchWith({
+          Just: ({ value }) => value.release()
+        }))
+
       const newJob = await connector.pop('default')
 
-      expect(newJob.attempts).to.equal(2)
+      newJob.matchWith({
+        Just: ({ value: { attempts } }) => expect(attempts).to.equal(2)
+      })
     })
   })
 
@@ -125,7 +139,13 @@ describe('knexConnector', () => {
       await connector.pop('default')
 
       const newJob = await connector.pop('default')
-      expect(newJob).to.equal(null)
+
+      newJob.matchWith({
+        Just: _ => {
+          throw new Error('Expected to receive Nothing')
+        },
+        Nothing: _ => {}
+      })
     })
 
     it('can take job which reservation expired', async () => {
@@ -135,7 +155,12 @@ describe('knexConnector', () => {
       clock.tick(retryAfter * 1000)
 
       const newJob = await connector.pop('default')
-      expect(newJob).to.exist // eslint-disable-line
+      newJob.matchWith({
+        Just: _ => {},
+        Nothing: _ => {
+          throw new Error('Expected job to exist')
+        }
+      })
     })
   })
 
@@ -144,11 +169,18 @@ describe('knexConnector', () => {
       await connector.push(job.of('test.job'))
       const newJob = await connector.pop('default')
 
-      await newJob.release(60)
+      await newJob.matchWith({
+        Just: ({ value }) => value.release(60)
+      })
 
       const nextJob = await connector.pop('default')
 
-      expect(nextJob).to.equal(null)
+      nextJob.matchWith({
+        Just: _ => {
+          throw new Error('Expected job to be Nothing')
+        },
+        Nothing: _ => {}
+      })
     })
   })
 
