@@ -97,7 +97,7 @@ describe('knexConnector', () => {
       const jobId = await connector.push(job.of('test.job'))
       const newJob = await connector.pop('default')
 
-      newJob.matchWith({
+      await newJob.matchWith({
         Just: ({ value }) => value.release(60)
       })
 
