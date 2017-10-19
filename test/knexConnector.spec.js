@@ -233,7 +233,7 @@ describe('knexConnector', () => {
       const stub = sinon.stub()
       stub.callsFake(job => {
         if (job.attempts === 1) {
-          job.release(0.5)
+          job.release()
         } else {
           job.remove()
         }
