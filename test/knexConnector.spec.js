@@ -14,25 +14,34 @@ const { expect } = chai
 const retryAfter = 60
 const env = process.env.NODE_ENV || 'development'
 
-const dateToSeconds = date => Math.round(new Date(date).getTime() / 1000, 0)
+const dateToSeconds = date => Math.floor(new Date(date).getTime() / 1000, 0)
 
 describe('knexConnector', () => {
   let connection
   let connector
+  let clock
 
   before(() => {
     connection = knex(knexConfig[env])
     connector = knexConnector({ knex: connection, retryAfter })
   })
 
+  after(() => {
+    return connection.destroy()
+  })
+
   afterEach(() => {
+    clock && clock.restore()
+    clock = null
+
     return connection.table('jobs').delete()
   })
 
   it('pushes job to database', async () => {
-    const clock = sinon.useFakeTimers({
+    clock = sinon.useFakeTimers({
       now: Date.now()
     })
+
     const testJob = job.of('test.job', { foo: 1 })
     const id = await connector.push(testJob)
     const dbRecord = await connection.table('jobs')
@@ -46,9 +55,7 @@ describe('knexConnector', () => {
       reserved_at: null
     })
 
-    expect(dateToSeconds(dbRecord.created_at)).to.equal(dateToSeconds(new Date()))
-
-    clock.restore()
+    expect(dbRecord.created_at).to.equal(dateToSeconds(new Date()))
   })
 
   it('pops first available job', async () => {
@@ -75,11 +82,11 @@ describe('knexConnector', () => {
         .where({ id: jobId })
         .count('id as count')
 
-      expect(count).to.equal(0)
+      expect(parseInt(count)).to.equal(0)
     })
 
     it('allows to release job', async () => {
-      const clock = sinon.useFakeTimers({ now: Date.now() })
+      clock = sinon.useFakeTimers({ now: Date.now() })
 
       const jobId = await connector.push(job.of('test.job'))
       const newJob = await connector.pop('default')
@@ -91,15 +98,11 @@ describe('knexConnector', () => {
         .first()
 
       expect(dbRecord.reserved_at).to.equal(null)
-      expect(dateToSeconds(dbRecord.available_at)).to.equal(dateToSeconds(Date.now() + 60000))
-
-      clock.restore()
+      expect(dbRecord.available_at).to.equal(dateToSeconds(Date.now()) + 60)
     })
   })
 
   describe('reserved_at', () => {
-    let clock
-
     beforeEach(() => {
       clock = sinon.useFakeTimers({ now: Date.now() })
     })
