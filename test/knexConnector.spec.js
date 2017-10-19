@@ -129,4 +129,17 @@ describe('knexConnector', () => {
       expect(newJob).to.exist // eslint-disable-line
     })
   })
+
+  describe('available_at', () => {
+    it('cant take job which was released with delay', async () => {
+      await connector.push(job.of('test.job'))
+      const newJob = await connector.pop('default')
+
+      await newJob.release(60)
+
+      const nextJob = await connector.pop('default')
+
+      expect(nextJob).to.equal(null)
+    })
+  })
 })
