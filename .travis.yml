@@ -15,11 +15,11 @@ env:
   - NODE_ENV=postgres9
 
 before_script:
-  - ./.travis/setupDb.sh
+  - .travis/setUp.sh
 
 script:
   - npm run lint
   - npm test
 
 after_script:
-  - docker stop queue-knex-db
+  - .travis/tearDown.sh
