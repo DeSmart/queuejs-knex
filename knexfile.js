@@ -1,35 +1,32 @@
-const dbConnection = {
+const connection = {
   user: 'test',
   database: 'test',
   password: 'test',
-  port: 7000
+  port: 7000,
+  pool: { min: 0, max: 1 }
 }
 
-module.exports = {
-  development: {
-    client: 'sqlite3',
-    connection: {
-      filename: './dev.sqlite3'
-    }
-  },
+const drivers = {
+  mysql5: 'mysql2',
+  mysql: 'mysql2',
+  postgres: 'pg',
+  postgres9: 'pg'
+}
 
-  mysql5: {
-    client: 'mysql2',
-    connection: dbConnection
-  },
-
-  mysql: {
-    client: 'mysql2',
-    connection: dbConnection
-  },
-
-  postgres: {
-    client: 'pg',
-    connection: dbConnection
-  },
-
-  postgres9: {
-    client: 'pg',
-    connection: dbConnection
+const development = {
+  client: 'sqlite3',
+  connection: {
+    filename: './dev.sqlite3'
   }
 }
+
+module.exports = Object.keys(drivers)
+  .reduce(
+    (config, envName) => Object.assign({}, config, {
+      [envName]: {
+        client: drivers[envName],
+        connection
+      }
+    }),
+    { development }
+  )
