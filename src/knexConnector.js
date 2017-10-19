@@ -40,7 +40,7 @@ const isReservedButExpired = retryAfter => function () {
 module.exports = ({
   knex,
   table = 'jobs',
-  retryAfter = 60
+  retryAfter = 600
 }) => ({
   onJob (job) {
   },
