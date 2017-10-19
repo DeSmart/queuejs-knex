@@ -12,6 +12,7 @@ chai.use(sinonChai)
 const { expect } = chai
 
 const retryAfter = 60
+const env = process.env.NODE_ENV || 'development'
 
 const dateToSeconds = date => Math.round(new Date(date).getTime() / 1000, 0)
 
@@ -20,7 +21,7 @@ describe('knexConnector', () => {
   let connector
 
   before(() => {
-    connection = knex(knexConfig.development)
+    connection = knex(knexConfig[env])
     connector = knexConnector({ knex: connection, retryAfter })
   })
 
