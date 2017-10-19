@@ -1,5 +1,10 @@
 const { job } = require('@desmart/queue')
 
+const dateToTimestamp = date => Math.floor(date.getTime() / 1000, 0)
+const timestamp = date => date
+  ? dateToTimestamp(date)
+  : dateToTimestamp(new Date())
+
 const toJob = (knex, table) => record => job.fromJSON(JSON.parse(record.payload))
   .increment()
   .withActions({
@@ -17,7 +22,7 @@ const toJob = (knex, table) => record => job.fromJSON(JSON.parse(record.payload)
           .where({ id: record.id })
           .update({
             reserved_at: null,
-            available_at: new Date(Date.now() + delay * 1000)
+            available_at: timestamp() + delay
           })
       )
     }
@@ -25,11 +30,11 @@ const toJob = (knex, table) => record => job.fromJSON(JSON.parse(record.payload)
 
 const isAvailable = function () {
   this.whereNull('reserved_at')
-    .where('available_at', '<=', new Date())
+    .where('available_at', '<=', timestamp())
 }
 
 const isReservedButExpired = retryAfter => function () {
-  this.where('reserved_at', '<=', new Date(Date.now() - retryAfter * 1000))
+  this.where('reserved_at', '<=', timestamp() - retryAfter)
 }
 
 module.exports = ({
@@ -45,8 +50,8 @@ module.exports = ({
       queue: job.queue,
       payload: JSON.stringify(job),
       attempts: job.attempts,
-      created_at: new Date(),
-      available_at: new Date()
+      created_at: timestamp(),
+      available_at: timestamp()
     }
 
     return knex.table(table)
@@ -77,7 +82,7 @@ module.exports = ({
           .transacting(trx)
           .where({ id: record.id })
           .update({
-            reserved_at: new Date(),
+            reserved_at: timestamp(),
             attempts: record.attempts + 1
           })
 
