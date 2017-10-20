@@ -2,9 +2,9 @@
 # yarn lockfile v1
 
 
-"@desmart/queue@https://github.com/DeSmart/queuejs.git":
-  version "0.0.1"
-  resolved "https://github.com/DeSmart/queuejs.git#07818b417a34fa89460e8d821937caf4fe72e9ae"
+"@desmart/queue@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@desmart/queue/-/queue-1.0.0.tgz#a23e8787043f25429c6ff07148250ddd296f1b2e"
 
 abbrev@1:
   version "1.1.1"
