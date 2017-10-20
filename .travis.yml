@@ -21,5 +21,9 @@ script:
   - npm run lint
   - npm test
 
+after_failure:
+  - docker ps -a
+  - docker logs queue-knex-db
+
 after_script:
   - .travis/tearDown.sh
