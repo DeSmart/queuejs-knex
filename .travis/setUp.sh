@@ -8,6 +8,8 @@ case "$NODE_ENV" in
       -e MYSQL_PASSWORD=test \
       -e MYSQL_RANDOM_ROOT_PASSWORD=1 \
       mysql
+
+    sleep 20
     ;;
 
   "mysql5")
@@ -17,6 +19,8 @@ case "$NODE_ENV" in
       -e MYSQL_PASSWORD=test \
       -e MYSQL_RANDOM_ROOT_PASSWORD=1 \
       mysql:5
+
+    sleep 20
     ;;
 
   "postgres")
@@ -25,6 +29,8 @@ case "$NODE_ENV" in
       -e POSTGRES_USER=test \
       -e POSTGRES_PASSWORD=test \
       postgres:alpine
+
+    sleep 10
     ;;
 
   "postgres9")
@@ -33,10 +39,10 @@ case "$NODE_ENV" in
       -e POSTGRES_USER=test \
       -e POSTGRES_PASSWORD=test \
       postgres:9-alpine
+
+    sleep 10
     ;;
 
   *)
     ;;
 esac
-
-sleep 10
