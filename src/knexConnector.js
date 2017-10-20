@@ -1,50 +1,28 @@
 const Maybe = require('folktale/maybe')
 const { job } = require('@desmart/queue')
-
-const dateToTimestamp = date => Math.floor(date.getTime() / 1000, 0)
-const timestamp = date => date
-  ? dateToTimestamp(date)
-  : dateToTimestamp(new Date())
+const { timestamp } = require('./utils')
+const query = require('./query')
 
 const getJobAttributes = dbRecord => Object.assign(
   JSON.parse(dbRecord.payload),
   { attempts: dbRecord.attempts }
 )
 
-const toJob = (knex, table) => dbRecord => dbRecord.map(getJobAttributes)
-  .map(job.fromJSON)
-  .map(job => job.increment())
-  .map(job => job.withActions({
-    remove () {
-      const { id } = dbRecord.getOrElse({ id: null })
-      return knex.transaction(
-        trx => trx.from(table)
-          .where({ id })
-          .delete()
-      )
-    },
+const toJob = (knex, table) => dbRecord =>
+  dbRecord.map(getJobAttributes)
+    .map(job.fromJSON)
+    .map(job => job.increment())
+    .map(job => job.withActions({
+      remove () {
+        const { id } = dbRecord.getOrElse({ id: null })
+        return query.removeJob(knex, table, id)
+      },
 
-    release (delay = 0) {
-      const { id } = dbRecord.getOrElse({ id: null })
-      return knex.transaction(
-        trx => trx.from(table)
-          .where({ id })
-          .update({
-            reserved_at: null,
-            available_at: timestamp() + delay
-          })
-      )
-    }
-  }))
-
-const isAvailable = function () {
-  this.whereNull('reserved_at')
-    .where('available_at', '<=', timestamp())
-}
-
-const isReservedButExpired = retryAfter => function () {
-  this.where('reserved_at', '<=', timestamp() - retryAfter)
-}
+      release (delay = 0) {
+        const { id } = dbRecord.getOrElse({ id: null })
+        return query.releaseJob(knex, table, id, delay)
+      }
+    }))
 
 module.exports = ({
   knex,
@@ -58,18 +36,13 @@ module.exports = ({
   },
 
   push (job) {
-    const data = {
+    return query.insertJob(knex, table, {
       queue: job.queue,
       payload: JSON.stringify(job),
       attempts: job.attempts,
       created_at: timestamp(),
       available_at: timestamp()
-    }
-
-    return knex.table(table)
-      .returning('id')
-      .insert(data)
-      .then(([id]) => id)
+    })
   },
 
   /**
@@ -100,27 +73,15 @@ module.exports = ({
   async pop (queue) {
     return knex
       .transaction(async trx => {
-        const record = await knex.table(table)
-          .transacting(trx)
-          .forUpdate()
-          .where(isAvailable)
-          .orWhere(isReservedButExpired(retryAfter))
-          .orderBy('id', 'asc')
-          .first()
+        const record = await query.getAvailableJob(trx, table, retryAfter)
 
-        if (!record) {
-          return Maybe.Nothing()
-        }
-
-        await knex.table(table)
-          .transacting(trx)
-          .where({ id: record.id })
-          .update({
-            reserved_at: timestamp(),
-            attempts: record.attempts + 1
-          })
-
-        return Maybe.Just(record)
+        return record.matchWith({
+          Just: async ({ value }) => {
+            await query.reserveJob(trx, table, value)
+            return Maybe.Just(value)
+          },
+          Nothing: Maybe.Nothing
+        })
       })
       .then(toJob(knex, table))
   }
