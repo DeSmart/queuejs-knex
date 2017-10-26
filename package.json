@@ -1,6 +1,6 @@
 {
   "name": "@desmart/queue-knex",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Knexjs connector for @desmart/queue",
   "main": "index.js",
   "author": "Radoslaw Mejer <radmen@radmen.info>",
