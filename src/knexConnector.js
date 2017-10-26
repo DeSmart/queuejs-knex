@@ -54,19 +54,24 @@ module.exports = ({
    * @return {Function} calling this function will break loop cycle
    */
   listen (queue, { wait = 10 } = {}) {
+    const waitMs = wait * 1000
+    let timer
+
     const fetch = async () => {
       const job = await this.pop(queue)
 
-      job.matchWith({
+      await job.matchWith({
         Just: ({ value }) => dispatchJob(value),
         Nothing: () => {}
       })
+
+      timer = setTimeout(fetch, waitMs)
     }
 
-    const timer = setInterval(fetch, wait * 1000)
+    fetch()
 
     return () => {
-      clearInterval(timer)
+      clearTimeout(timer)
     }
   },
 
